@@ -1,0 +1,8 @@
+@font-face {
+    font-family: 'latomedium';
+    src:
+        url('./latomedium.font.woff2') format('woff2'),
+        url('./latomedium.font.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}

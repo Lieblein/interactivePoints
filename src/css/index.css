@@ -1,0 +1,43 @@
+@import "../fonts/latomedium/index.css";
+@import "../fonts/glyphter/index.css";
+
+header {
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.heading {
+    text-align: center;
+    margin: 0;
+
+    &-attention {
+        color: orange;
+        font-family: 'latomedium';
+    }
+}
+
+.icon-pc {
+    color: red;
+    font-family: 'glyphter';
+
+    &:before {
+        content: 'A';
+        font-size: 40px;
+    }
+}
+
+.icon-rocket {
+    display: block;
+    height: 80px;
+    width: 80px;
+    background: url('../images/rocket.img.svg') center no-repeat;
+    background-size: contain;
+}
+
+.angular-logo {
+    width: 100px;
+    height: 100px;
+    background: url('../images/angular-logo.png') center no-repeat;
+    background-size: 100% 100%;
+}
