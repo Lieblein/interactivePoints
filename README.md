@@ -1,15 +1,11 @@
-# `Awesome HTC Project Stub`
+# Interactive 3D Points
 
 ## Tech stack
  - `babel`
  - `postcss`
- - `webapck 2`
- - `json-server`
+ - `webapck 3`
  - `eslint and stylelint`
  - `pre-commit hooks`
-
-## Notes
-because we want build each resource in separate folder all `svg` file names should be suffixed with `'font.svg'` or `'img.svg'` strings.
 
 
 ## Project Structure
@@ -20,22 +16,13 @@ because we want build each resource in separate folder all `svg` file names shou
 |  |-- webpack.dev.js                // extend common config for dev build
 |  |-- webpack.prod.js               // extend common config for prod build
 
-|-- server                        // server mocking client-server interraction
-|  |-- db.json                      // data base. see https://github.com/typicode/json-server
-
 |-- src                           // source code
 |  |-- css                          //
 |  |  |-- index.css                 // styles entry point
-|  |-- fonts                        //
-|  |  |-- some font folder          //
-|  |  |-- index.css                 // font css entry point
-|  |  |-- font itself               // name `should be suffixed` with `.font` str:  `font_name.font.(ttf|woff|woff2|eot|svg)`
-|  |-- images                       // svg images `should be suffixed` with `.img` str: `img_name.img.svg`
+|  |-- images                       //
 |  |-- js                           //
 |  |  |-- index.js                  // app entry point
 |  |  |-- polyfills.js              // polyfills
-|  |-- static                       // some static files
-|  |-- index.html                   // template (used by https://github.com/jantimon/html-webpack-plugin)
 
 |-- .babelrc                        //
 |-- .editorconfig                   //
@@ -62,7 +49,6 @@ because we want build each resource in separate folder all `svg` file names shou
 
 ## npm scripts
 - `npm start or npm run start` - assemble dev build and launch dev server at http://localhost:8080/
-- `npm run start-server` - launch json-server at http://localhost:3000/
 - `npm run build` - assemble production build
 - `npm run lint` - code style check
 - `npm run lint-js` - js code style check

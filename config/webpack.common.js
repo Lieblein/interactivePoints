@@ -1,7 +1,6 @@
 const webpack = require('webpack');
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
 const helpers = require('./helpers');
 
 const webpackConfig = function (options) {
@@ -49,41 +48,19 @@ const webpackConfig = function (options) {
                 },
                 // images
                 {
-                    test: /\.(jpg|png|gif)$|(img\.svg)$/,
+                    test: /\.(jpg|png|gif|svg)$/,
                     use: {
                         loader: 'file-loader',
                         options: { name: img_folder + '[name].[ext]' }
                     }
-                },
-                // fonts
-                {
-                    test: /font\.woff(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-                    use: {
-                        loader: 'file-loader',
-                        options: { mimetype: 'application/font-woff', name: fonts_folder + '[name].[ext]' }
-                    },
-                },
-                {
-                    test: /font\.woff2(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-                    use: {
-                        loader: 'file-loader',
-                        options: { mimetype: 'application/font-woff2', name: fonts_folder + '[name].[ext]' }
-                    },
                 }
-
             ]
         },
         plugins: [
             new HtmlWebpackPlugin({
                 inject: 'body',
                 template: 'src/index.html'
-            }),
-            new CopyWebpackPlugin([
-                {
-                    from: helpers.root('src', 'static'),
-                    to: helpers.root('build', 'static')
-                }
-            ])
+            })
         ]
     };
 };
