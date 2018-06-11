@@ -30,65 +30,98 @@ function addRenderer(container) {
     return renderer;
 }
 
-function init(container) {
-    const sphereCount = 40;
-    const width = 150;
-    const length = 150;
+function getCatheterLength(hypotenuse, catheter) {
+    return Math.sqrt(hypotenuse * hypotenuse - catheter * catheter);
+}
 
+function getAngle(hypotenuse, oppositeCatheter) {
+    const radian = Math.asin(oppositeCatheter / hypotenuse);
+    return radian * 180 / Math.PI;
+}
+
+function degToRad(deg) {
+    return deg * Math.PI / 180;
+}
+
+function generasteSpheres(scene) {
+    const sphereRadius = 0.1;
+    const widthSegments = 8;
+    const heightSegments = 8;
+    const sphereGeometry = new SphereBufferGeometry(sphereRadius, widthSegments, heightSegments);
+    const sphereMaterial = new MeshBasicMaterial({ color: 0xffffff });
+
+    const layoutRadius = 6;
+    const delta = 0.5;
+    let currentDelta = 0;
+    const spheres = [];
+    // ищем массив параллелей от экватериальной к полюсам layout-сферы
+    while (currentDelta < layoutRadius) {
+        // радиус параллели
+        const currentRadius = currentDelta === 0 ?
+            layoutRadius
+            : getCatheterLength(layoutRadius, currentDelta);
+
+        // длинна окружности параллели
+        const circleLength = 2 * Math.PI * currentRadius;
+        const sphereCount = Math.floor(circleLength / delta);
+
+        const fiDelta = 360 / sphereCount;
+        // угол между осью x и layoutRadius к currentRadius
+        const tetaModule = currentDelta === 0 ? 90 : getAngle(layoutRadius, currentRadius);
+        // у нас есть 2 симметричные относительно экватора параллели или экватор
+        const tetas = currentDelta === 0 ? [tetaModule] : [tetaModule, 180 - tetaModule];
+
+        tetas.forEach((teta) => {
+            const radTeta = degToRad(teta);
+            for (let i = 0; i < sphereCount; i++) {
+                const radFi = degToRad(i * fiDelta);
+                // console.log('fi ' + fi);
+                // теперь у нас есть все 3 сферисеские координаты
+                // fi, teta, layoutRadius
+                const x = layoutRadius * Math.sin(radTeta) * Math.cos(radFi);
+                const y = layoutRadius * Math.sin(radTeta) * Math.sin(radFi);
+                const z = layoutRadius * Math.cos(radTeta);
+
+                const sphere = new Mesh(sphereGeometry, sphereMaterial);
+                sphere.position.set(x, y, z);
+                scene.add(sphere);
+                spheres.push(sphere);
+            }
+        });
+
+        currentDelta += delta;
+    }
+    return spheres;
+}
+
+function init(container) {
     const scene = new Scene();
     scene.background = new Color(0x005da4);
     const camera = addCamera(container, scene);
     const renderer = addRenderer(container);
-
-    /* const pcBuffer = generatePointcloud(new THREE.Color(1, 0, 0), width, length);
-    pcBuffer.scale.set(10, 10, 10);
-    pcBuffer.position.set(-5, 0, 5);
-    scene.add(pcBuffer);
-
-    const pcIndexed = generateIndexedPointcloud(new THREE.Color(0, 1, 0), width, length);
-    pcIndexed.scale.set(10, 10, 10);
-    pcIndexed.position.set(5, 0, 5);
-    scene.add(pcIndexed);
-
-    const pcIndexedOffset =
-        generateIndexedWithOffsetPointcloud(new THREE.Color(0, 1, 1), width, length);
-    pcIndexedOffset.scale.set(10, 10, 10);
-    pcIndexedOffset.position.set(5, 0, -5);
-    scene.add(pcIndexedOffset);
-
-    const pcRegular = generateRegularPointcloud(new THREE.Color(1, 0, 1), width, length);
-    pcRegular.scale.set(10, 10, 10);
-    pcRegular.position.set(-5, 0, -5);
-    scene.add(pcRegular);
-
-    const pointclouds = [pcBuffer, pcIndexed, pcIndexedOffset, pcRegular]; */
-
-    const sphereGeometry = new SphereBufferGeometry(0.1, 32, 32);
-    const sphereMaterial = new MeshBasicMaterial({ color: 0xffffff });
-    const spheres = [];
-    for (let i = 0; i < sphereCount; i++) {
-        const sphere = new Mesh(sphereGeometry, sphereMaterial);
-        scene.add(sphere);
-        spheres.push(sphere);
-    }
-
+    const spheres = generasteSpheres(scene);
     const threshold = 0.1;
     const raycaster = new Raycaster();
     raycaster.params.Points.threshold = threshold;
 
-    // window.addEventListener('resize', onWindowResize, false);
     // document.addEventListener('mousemove', onDocumentMouseMove, false);
 
-    return { scene, camera, renderer };
+    return {
+        scene,
+        camera,
+        renderer,
+        raycaster,
+        spheres,
+    };
 }
 
-function addStats(container) {
+/* function addStats(container) {
     const stats = new Stats();
     stats.domElement.style.position	= 'absolute';
     stats.domElement.style.left	= '0px';
     stats.domElement.style.bottom = '0px';
     container.appendChild(stats.domElement);
-}
+} */
 
 function render(scene, camera, renderer) {
     // camera.applyMatrix(rotateY);
@@ -111,11 +144,11 @@ function render(scene, camera, renderer) {
     renderer.render(scene, camera);
 }
 
-function animate(scene, camera, renderer) {
+/* function animate(scene, camera, renderer) {
     // requestAnimationFrame(animate);
     render(scene, camera, renderer);
     // stats.update();
-}
+} */
 
 (function () {
     if (!Detector.webgl) Detector.addGetWebGLMessage();
