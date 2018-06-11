@@ -7,8 +7,9 @@ import {
     SphereBufferGeometry,
     Mesh,
     Raycaster,
+    Matrix4,
 } from 'three';
-import Stats from '@xailabs/three-renderer-stats';
+// import Stats from '@xailabs/three-renderer-stats';
 
 import Detector from './detector';
 import '../css/index.pcss';
@@ -43,6 +44,13 @@ function degToRad(deg) {
     return deg * Math.PI / 180;
 }
 
+function convertSphericalToCartesian(radius, radTeta, radFi) {
+    const x = radius * Math.sin(radTeta) * Math.cos(radFi);
+    const y = radius * Math.sin(radTeta) * Math.sin(radFi);
+    const z = radius * Math.cos(radTeta);
+    return { x, y, z };
+}
+
 function generasteSpheres(scene) {
     const sphereRadius = 0.1;
     const widthSegments = 8;
@@ -65,7 +73,7 @@ function generasteSpheres(scene) {
         const circleLength = 2 * Math.PI * currentRadius;
         const sphereCount = Math.floor(circleLength / delta);
 
-        const fiDelta = 360 / sphereCount;
+        const radFiDelta = degToRad(360 / sphereCount);
         // угол между осью x и layoutRadius к currentRadius
         const tetaModule = currentDelta === 0 ? 90 : getAngle(layoutRadius, currentRadius);
         // у нас есть 2 симметричные относительно экватора параллели или экватор
@@ -74,13 +82,8 @@ function generasteSpheres(scene) {
         tetas.forEach((teta) => {
             const radTeta = degToRad(teta);
             for (let i = 0; i < sphereCount; i++) {
-                const radFi = degToRad(i * fiDelta);
-                // console.log('fi ' + fi);
-                // теперь у нас есть все 3 сферисеские координаты
-                // fi, teta, layoutRadius
-                const x = layoutRadius * Math.sin(radTeta) * Math.cos(radFi);
-                const y = layoutRadius * Math.sin(radTeta) * Math.sin(radFi);
-                const z = layoutRadius * Math.cos(radTeta);
+                const radFi = i * radFiDelta;
+                const { x, y, z } = convertSphericalToCartesian(layoutRadius, radTeta, radFi);
 
                 const sphere = new Mesh(sphereGeometry, sphereMaterial);
                 sphere.position.set(x, y, z);
@@ -88,6 +91,16 @@ function generasteSpheres(scene) {
                 spheres.push(sphere);
             }
         });
+
+        // добавим сферы на полюсах, чтобы не было "дырок"
+        const northSphere = new Mesh(sphereGeometry, sphereMaterial);
+        northSphere.position.set(0, 0, layoutRadius);
+        scene.add(northSphere);
+        spheres.push(northSphere);
+        const southSphere = new Mesh(sphereGeometry, sphereMaterial);
+        southSphere.position.set(0, 0, -layoutRadius);
+        scene.add(southSphere);
+        spheres.push(southSphere);
 
         currentDelta += delta;
     }
@@ -123,9 +136,9 @@ function init(container) {
     container.appendChild(stats.domElement);
 } */
 
-function render(scene, camera, renderer) {
-    // camera.applyMatrix(rotateY);
-    // camera.updateMatrixWorld();
+function render(scene, camera, renderer, rotateY) {
+    camera.applyMatrix(rotateY);
+    camera.updateMatrixWorld();
     // raycaster.setFromCamera(mouse, camera);
     // const intersections = raycaster.intersectObjects(pointclouds);
     /* intersection = intersections.length > 0 ? intersections[0] : null;
@@ -144,11 +157,11 @@ function render(scene, camera, renderer) {
     renderer.render(scene, camera);
 }
 
-/* function animate(scene, camera, renderer) {
-    // requestAnimationFrame(animate);
-    render(scene, camera, renderer);
+function animate(scene, camera, renderer, rotateY) {
+    window.requestAnimationFrame(() => animate(scene, camera, renderer, rotateY));
+    render(scene, camera, renderer, rotateY);
     // stats.update();
-} */
+}
 
 (function () {
     if (!Detector.webgl) Detector.addGetWebGLMessage();
@@ -156,10 +169,11 @@ function render(scene, camera, renderer) {
     const container = document.getElementById('container');
     const { scene, camera, renderer } = init(container);
     // addStats(container);
-    // animate(scene, camera, renderer);
-    render(scene, camera, renderer);
+    const rotateY = new Matrix4().makeRotationY(0.005);
+    animate(scene, camera, renderer, rotateY);
+    // render(scene, camera, renderer);
 
     /* const mouse = new Vector2();
     const intersection = null;
-    const rotateY = new Matrix4().makeRotationY(0.005); */
+     */
 }());
