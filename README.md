@@ -1,3 +1,5 @@
+# [Demo](https://lieblein.github.io/interactivePoints/build/)
+
 # Interactive 3D Points
 
 ## Tech stack
