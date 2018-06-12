@@ -6,13 +6,13 @@ import {
     MeshBasicMaterial,
     SphereBufferGeometry,
     Mesh,
-    Raycaster,
     Matrix4,
     VectorKeyframeTrack,
     AnimationClip,
     AnimationMixer,
     Clock,
     Vector3,
+    Vector2,
 } from 'three';
 
 import Detector from './detector';
@@ -24,20 +24,22 @@ window.game = {
     scene: null,
     camera: null,
     renderer: null,
-    raycaster: null,
+    mouse: new Vector2(),
 };
 
 function addCamera() {
     const { offsetWidth, offsetHeight } = window.game.container;
-    window.game.camera = new PerspectiveCamera(
+    const camera = new PerspectiveCamera(
         45,
         offsetWidth / offsetHeight,
         1,
         10000,
     );
-    window.game.camera.position.set(10, 10, 10);
-    window.game.camera.lookAt(window.game.scene.position);
-    window.game.camera.updateMatrix();
+    camera.position.set(10, 10, 10);
+    camera.lookAt(window.game.scene.position);
+    camera.updateMatrix();
+
+    window.game.camera = camera;
 }
 
 function addRenderer() {
@@ -85,7 +87,7 @@ function generasteSphere(geometry, material, position, animationClip) {
 }
 
 function createPulsationAnimation() {
-    const { duration, pulseScale } = options.animation;
+    const { duration, pulseScale } = options.animation.scale;
     const times = [];
     const values = [];
     const tmp = new Vector3();
@@ -171,41 +173,32 @@ function generasteSpheres() {
 }
 
 function init() {
+    window.game.clock = new Clock(); // для анимации
     window.game.scene = new Scene();
     window.game.scene.background = new Color(options.scene.color);
     addCamera();
     addRenderer();
     const spheres = generasteSpheres();
-    const threshold = 0.1;
-    window.game.raycaster = new Raycaster();
-    window.game.raycaster.params.Points.threshold = threshold;
 
-    // document.addEventListener('mousemove', onDocumentMouseMove, false);
     return {
         spheres,
     };
 }
 
-function render(rotateY, spheres, activeIndex = 0) {
+function render(spheres) {
+    const { x, y } = window.game.mouse;
+    const { xCoef, yCoef } = options.animation.rotate;
+    const rotateY = new Matrix4()
+        .makeRotationY(x * xCoef)
+        .makeRotationX(y * yCoef);
     window.game.camera.applyMatrix(rotateY);
     window.game.camera.updateMatrixWorld();
 
-    // raycaster.setFromCamera(mouse, camera);
-    // const intersections = raycaster.intersectObjects(pointclouds);
-    /* intersection = intersections.length > 0 ? intersections[0] : null;
-    if (toggle > 0.02 && intersection !== null) {
-        spheres[ spheresIndex ].position.copy( intersection.point );
-        spheres[ spheresIndex ].scale.set( 1, 1, 1 );
-        spheresIndex = ( spheresIndex + 1 ) % spheres.length;
-        toggle = 0;
-    } */
-    // toggle += clock.getDelta();
     const delta = window.game.clock.getDelta();
-    // console.dir(activeIndex);
     for (let i = 0; i < spheres.length; i++) {
         for (let j = 0; j < spheres[i].length; j++) {
             const sphere = spheres[i][j];
-            const { mixer, mesh } = sphere;
+            const { mixer } = sphere;
             mixer.update(delta * mixer.timeScale);
         }
     }
@@ -213,24 +206,28 @@ function render(rotateY, spheres, activeIndex = 0) {
     window.game.renderer.render(window.game.scene, window.game.camera);
 }
 
-function animate(rotateY, spheres, activeIndex = 0) {
-    window.requestAnimationFrame(() => {
-        const newActiveIndex = activeIndex + 1;
-        const index = newActiveIndex === spheres.length ? 0 : newActiveIndex;
-        animate(rotateY, spheres, index);
-    });
-    render(rotateY, spheres, activeIndex);
+function animate(spheres) {
+    window.requestAnimationFrame(() => animate(spheres));
+    render(spheres);
+}
+
+function onDocumentMouseMove(event) {
+    event.preventDefault();
+    const { clientX, clientY } = event;
+    const { innerWidth, innerHeight } = window;
+    const widthHalf = innerWidth / 2;
+    const heightHalf = innerHeight / 2;
+    const x = clientX <= widthHalf ? clientX / widthHalf : (innerWidth - clientX) / widthHalf;
+    const y = clientY <= heightHalf ? clientY / heightHalf : (innerHeight - clientY) / heightHalf;
+    window.game.mouse.x = x;
+    window.game.mouse.y = y;
 }
 
 (function () {
     if (!Detector.webgl) Detector.addGetWebGLMessage();
 
     const { spheres } = init();
-    window.game.clock = new Clock();
-    const rotateY = new Matrix4().makeRotationY(0.005);
-    animate(rotateY, spheres);
+    animate(spheres);
 
-    /* const mouse = new Vector2();
-    const intersection = null;
-     */
+    document.addEventListener('mousemove', onDocumentMouseMove, false);
 }());

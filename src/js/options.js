@@ -12,8 +12,14 @@ const options = {
         delta: 0.5,
     },
     animation: {
-        duration: 10,
-        pulseScale: 1.5,
+        scale: {
+            duration: 10,
+            pulseScale: 1.5,
+        },
+        rotate: {
+            xCoef: 0.08,
+            yCoef: 0.1,
+        },
     },
 };
 export default options;
