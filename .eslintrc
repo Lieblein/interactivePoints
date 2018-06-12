@@ -4,7 +4,18 @@
     "parserOptions": {
         "ecmaVersion": 7
     },
+    "globals": {
+        "document": true,
+        "window": true
+    },    
     "rules": {
-        "indent": ["error", 4, { "SwitchCase": 1 }]
+        "indent": ["error", 4, { "SwitchCase": 1 }],
+        "func-names": 0,
+        "no-tabs": 0,
+        "wrap-iife": 0,
+        "no-plusplus": 0,
+        "no-mixed-operators": 0,
+        "no-restricted-properties": 0,
+        "linebreak-style": 0
     }
 }
