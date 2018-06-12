@@ -4,3 +4,4 @@ node_modules
 build
 result.webpack.config.json
 npm-debug.log
+yarn-error.log

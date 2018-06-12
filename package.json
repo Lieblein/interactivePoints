@@ -27,7 +27,6 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@xailabs/three-renderer-stats": "^1.0.4",
     "babel-polyfill": "^6.26.0",
     "three": "^0.93.0"
   },

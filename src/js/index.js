@@ -8,27 +8,44 @@ import {
     Mesh,
     Raycaster,
     Matrix4,
+    VectorKeyframeTrack,
+    AnimationClip,
+    AnimationMixer,
+    Clock,
+    Vector3,
 } from 'three';
-// import Stats from '@xailabs/three-renderer-stats';
 
 import Detector from './detector';
+import options from './options';
 import '../css/index.pcss';
 
-function addCamera(container, scene) {
-    const camera =
-        new PerspectiveCamera(45, container.offsetWidth / container.offsetHeight, 1, 10000);
-    camera.position.set(10, 10, 10);
-    camera.lookAt(scene.position);
-    camera.updateMatrix();
-    return camera;
+window.game = {
+    container: document.getElementById(options.scene.containerId),
+    scene: null,
+    camera: null,
+    renderer: null,
+    raycaster: null,
+};
+
+function addCamera() {
+    const { offsetWidth, offsetHeight } = window.game.container;
+    window.game.camera = new PerspectiveCamera(
+        45,
+        offsetWidth / offsetHeight,
+        1,
+        10000,
+    );
+    window.game.camera.position.set(10, 10, 10);
+    window.game.camera.lookAt(window.game.scene.position);
+    window.game.camera.updateMatrix();
 }
 
-function addRenderer(container) {
-    const renderer = new WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(container.offsetWidth, container.offsetHeight);
-    container.appendChild(renderer.domElement);
-    return renderer;
+function addRenderer() {
+    const { offsetWidth, offsetHeight } = window.game.container;
+    window.game.renderer = new WebGLRenderer();
+    window.game.renderer.setPixelRatio(window.devicePixelRatio);
+    window.game.renderer.setSize(offsetWidth, offsetHeight);
+    window.game.container.appendChild(window.game.renderer.domElement);
 }
 
 function getCatheterLength(hypotenuse, catheter) {
@@ -51,15 +68,58 @@ function convertSphericalToCartesian(radius, radTeta, radFi) {
     return { x, y, z };
 }
 
-function generasteSpheres(scene) {
-    const sphereRadius = 0.1;
-    const widthSegments = 8;
-    const heightSegments = 8;
-    const sphereGeometry = new SphereBufferGeometry(sphereRadius, widthSegments, heightSegments);
-    const sphereMaterial = new MeshBasicMaterial({ color: 0xffffff });
+function generasteSphere(geometry, material, position, animationClip) {
+    const sphere = new Mesh(geometry, material);
+    sphere.position.set(...position);
+    const scale = 0.01;
+    sphere.scale.set(scale, scale, scale);
 
-    const layoutRadius = 6;
-    const delta = 0.5;
+    const mixer = new AnimationMixer(sphere);
+    const action = mixer.clipAction(animationClip);
+    action.play();
+
+    return {
+        mesh: sphere,
+        mixer,
+    };
+}
+
+function createPulsationAnimation() {
+    const { duration, pulseScale } = options.animation;
+    const times = [];
+    const values = [];
+    const tmp = new Vector3();
+    const timesCount = 10;
+    const count = duration * timesCount;
+    const half = count / 2;
+
+    for (let i = 1; i <= count; i++) {
+        const time = i / timesCount;
+        const coef = i <= half ? i / half : (count - i) / half;
+        times.push(time);
+        // const scaleFactor = Math.random() * pulseScale;
+        const scaleFactor = coef * pulseScale;
+        tmp.set(scaleFactor, scaleFactor, scaleFactor).toArray(values, values.length);
+    }
+
+    const trackName = '.scale';
+    const track = new VectorKeyframeTrack(trackName, times, values);
+    return new AnimationClip('scale', duration, [track]);
+}
+
+function generasteSpheres() {
+    const { scene } = window.game;
+    const widthSegments = 6;
+    const heightSegments = 6;
+    const sphereGeometry = new SphereBufferGeometry(
+        options.sphere.radius,
+        widthSegments,
+        heightSegments,
+    );
+    const sphereMaterial = new MeshBasicMaterial({ color: options.sphere.color });
+    const animationClip = createPulsationAnimation();
+
+    const { radius: layoutRadius, delta } = options.layout;
     let currentDelta = 0;
     const spheres = [];
     // ищем массив параллелей от экватериальной к полюсам layout-сферы
@@ -78,67 +138,58 @@ function generasteSpheres(scene) {
         const tetaModule = currentDelta === 0 ? 90 : getAngle(layoutRadius, currentRadius);
         // у нас есть 2 симметричные относительно экватора параллели или экватор
         const tetas = currentDelta === 0 ? [tetaModule] : [tetaModule, 180 - tetaModule];
+        const parallelSpheres = [];
 
         tetas.forEach((teta) => {
             const radTeta = degToRad(teta);
             for (let i = 0; i < sphereCount; i++) {
                 const radFi = i * radFiDelta;
                 const { x, y, z } = convertSphericalToCartesian(layoutRadius, radTeta, radFi);
-
-                const sphere = new Mesh(sphereGeometry, sphereMaterial);
-                sphere.position.set(x, y, z);
-                scene.add(sphere);
-                spheres.push(sphere);
+                const pos = [x, y, z];
+                const sphere = generasteSphere(sphereGeometry, sphereMaterial, pos, animationClip);
+                scene.add(sphere.mesh);
+                parallelSpheres.push(sphere);
             }
         });
 
-        // добавим сферы на полюсах, чтобы не было "дырок"
-        const northSphere = new Mesh(sphereGeometry, sphereMaterial);
-        northSphere.position.set(0, 0, layoutRadius);
-        scene.add(northSphere);
-        spheres.push(northSphere);
-        const southSphere = new Mesh(sphereGeometry, sphereMaterial);
-        southSphere.position.set(0, 0, -layoutRadius);
-        scene.add(southSphere);
-        spheres.push(southSphere);
-
+        spheres.push(parallelSpheres);
         currentDelta += delta;
     }
+
+    // добавим сферы на полюсах, чтобы не было "дырок"
+    const northPos = [0, 0, layoutRadius];
+    const northSphere = generasteSphere(sphereGeometry, sphereMaterial, northPos, animationClip);
+    scene.add(northSphere.mesh);
+    spheres.push([northSphere]);
+
+    const southPos = [0, 0, -layoutRadius];
+    const southSphere = generasteSphere(sphereGeometry, sphereMaterial, southPos, animationClip);
+    scene.add(southSphere.mesh);
+    spheres.push([southSphere]);
+
     return spheres;
 }
 
-function init(container) {
-    const scene = new Scene();
-    scene.background = new Color(0x005da4);
-    const camera = addCamera(container, scene);
-    const renderer = addRenderer(container);
-    const spheres = generasteSpheres(scene);
+function init() {
+    window.game.scene = new Scene();
+    window.game.scene.background = new Color(options.scene.color);
+    addCamera();
+    addRenderer();
+    const spheres = generasteSpheres();
     const threshold = 0.1;
-    const raycaster = new Raycaster();
-    raycaster.params.Points.threshold = threshold;
+    window.game.raycaster = new Raycaster();
+    window.game.raycaster.params.Points.threshold = threshold;
 
     // document.addEventListener('mousemove', onDocumentMouseMove, false);
-
     return {
-        scene,
-        camera,
-        renderer,
-        raycaster,
         spheres,
     };
 }
 
-/* function addStats(container) {
-    const stats = new Stats();
-    stats.domElement.style.position	= 'absolute';
-    stats.domElement.style.left	= '0px';
-    stats.domElement.style.bottom = '0px';
-    container.appendChild(stats.domElement);
-} */
+function render(rotateY, spheres, activeIndex = 0) {
+    window.game.camera.applyMatrix(rotateY);
+    window.game.camera.updateMatrixWorld();
 
-function render(scene, camera, renderer, rotateY) {
-    camera.applyMatrix(rotateY);
-    camera.updateMatrixWorld();
     // raycaster.setFromCamera(mouse, camera);
     // const intersections = raycaster.intersectObjects(pointclouds);
     /* intersection = intersections.length > 0 ? intersections[0] : null;
@@ -148,30 +199,36 @@ function render(scene, camera, renderer, rotateY) {
         spheresIndex = ( spheresIndex + 1 ) % spheres.length;
         toggle = 0;
     } */
-    /* for (let i = 0; i < spheres.length; i++) {
-        const sphere = spheres[i];
-        sphere.scale.multiplyScalar( 0.98 );
-        sphere.scale.clampScalar( 0.01, 1 );
-    } */
     // toggle += clock.getDelta();
-    renderer.render(scene, camera);
+    const delta = window.game.clock.getDelta();
+    // console.dir(activeIndex);
+    for (let i = 0; i < spheres.length; i++) {
+        for (let j = 0; j < spheres[i].length; j++) {
+            const sphere = spheres[i][j];
+            const { mixer, mesh } = sphere;
+            mixer.update(delta * mixer.timeScale);
+        }
+    }
+
+    window.game.renderer.render(window.game.scene, window.game.camera);
 }
 
-function animate(scene, camera, renderer, rotateY) {
-    window.requestAnimationFrame(() => animate(scene, camera, renderer, rotateY));
-    render(scene, camera, renderer, rotateY);
-    // stats.update();
+function animate(rotateY, spheres, activeIndex = 0) {
+    window.requestAnimationFrame(() => {
+        const newActiveIndex = activeIndex + 1;
+        const index = newActiveIndex === spheres.length ? 0 : newActiveIndex;
+        animate(rotateY, spheres, index);
+    });
+    render(rotateY, spheres, activeIndex);
 }
 
 (function () {
     if (!Detector.webgl) Detector.addGetWebGLMessage();
 
-    const container = document.getElementById('container');
-    const { scene, camera, renderer } = init(container);
-    // addStats(container);
+    const { spheres } = init();
+    window.game.clock = new Clock();
     const rotateY = new Matrix4().makeRotationY(0.005);
-    animate(scene, camera, renderer, rotateY);
-    // render(scene, camera, renderer);
+    animate(rotateY, spheres);
 
     /* const mouse = new Vector2();
     const intersection = null;
